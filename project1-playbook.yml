@@ -1,0 +1,119 @@
+---
+
+- name: Ubuntu edureka project1 solution
+
+  user: edureka
+
+  hosts: webserver
+
+  become: yes
+
+  tasks:
+
+    - name: Update repository list and cache
+
+      apt: update_cache=yes cache_valid_time=3600
+
+      
+
+    - name: Upgrade all packages on the Cloud Server
+
+      apt: upgrade=yes
+
+      
+
+    - name: Install the latest versions of each component
+
+      apt:
+
+        name:
+
+          - apache2
+          - puppet
+
+        state: latest
+
+
+
+    - name: Check that apache2 is enabled and running
+
+      service:
+
+        name: apache2
+
+        enabled: true
+
+        state: started
+ 
+    - name: copy Dockerfile
+
+      copy:
+
+        src: ./Dockerfile
+
+        dest: /home/edureka/Dockerfile
+
+        owner: edureka
+
+        group: edureka
+
+        mode: '0777'
+ 
+    - name: build container image
+
+      docker_image:
+
+        name: democontainer:v1.0
+
+        build:
+
+          path: /home/edureka
+
+        state: present
+
+    # Run docker container
+
+    - name: Run docker container
+
+      docker_container:
+
+        name: phpfpm
+
+        image: nimmis/alpine-apache
+
+        network_mode: bridge
+
+        state: started
+        
+        restart: yes
+
+        ports:
+
+          - "8888:80"
+
+        volumes:
+
+          - /var/www:/var/www/
+    - name: Confirm that the web server is working
+
+      uri:
+
+        url: http://{{ansible_hostname}}:8888
+
+        status_code: 200
+       
+    
+    - name: Stop The container
+      docker_container:
+
+        name: phpfpm
+
+        state: stopped
+
+    - name: remove container
+
+      docker_container:
+
+        name: phpfpm
+
+        state: absent

@@ -1,0 +1,95 @@
+---
+
+- name: Ubuntu edureka project1 solution
+
+  user: edureka
+
+  hosts: webserver
+
+  become: yes
+
+  tasks:
+
+    - name: Update repository list and cache
+
+      apt: update_cache=yes cache_valid_time=3600
+
+      
+
+    - name: Upgrade all packages on the Cloud Server
+
+      apt: upgrade=yes
+
+
+    - name: copy Dockerfile
+
+      copy:
+
+        src: ./Dockerfile
+
+        dest: /home/edureka/Dockerfile
+
+        owner: edureka
+
+        group: edureka
+
+        mode: '0777'
+    
+    - name: copy website directory
+
+      copy: src={{playbook_dir}}/website/ dest=website/ remote_src=false 
+ 
+    - name: build container image
+
+      docker_image:
+
+        name: democontainer:v1.0
+
+        build:
+
+          path: /home/edureka
+
+        state: present
+
+    # Run docker container
+
+    - name: Run docker container
+
+      docker_container:
+
+        name: democontainer
+        image: democontainer:v1.0
+
+        network_mode: bridge
+
+        state: started
+        
+        restart: yes
+
+        ports:
+
+          - "8988:80"
+
+    - name: Confirm that the web server is working
+
+      uri:
+
+        url: http://{{ansible_hostname}}:8988
+
+        status_code: 200
+       
+    
+    - name: Stop The container
+      docker_container:
+
+        name: democontainer
+
+        state: stopped
+
+    - name: remove container
+
+      docker_container:
+
+        name: democontainer
+
+        state: absent
